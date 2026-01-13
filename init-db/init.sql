@@ -1,0 +1,3 @@
+CREATE DATABASE user_db;
+CREATE DATABASE list_db;
+CREATE DATABASE recipe_db;

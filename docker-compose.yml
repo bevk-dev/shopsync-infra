@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:latest
+    container_name: shopsync-db
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    command: >
+      sh -c "docker-entrypoint.sh postgres &
+      sleep 5;
+      psql -U postgres -c 'CREATE DATABASE user_db;';
+      psql -U postgres -c 'CREATE DATABASE list_db;';
+      psql -U postgres -c 'CREATE DATABASE recipe_db;';
+      wait"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  redis:
+    image: redis:latest
+    container_name: shopsync-redis
+    ports:
+      - "6379:6379"
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: shopsync-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      KAFKA_HEAP_OPTS: "-Xms128M -Xmx128M"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: shopsync-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: EXTERNAL:PLAINTEXT,INTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: EXTERNAL://localhost:9092,INTERNAL://kafka:29092
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_HEAP_OPTS: "-Xms256M -Xmx512M"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
