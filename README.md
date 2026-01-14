@@ -20,8 +20,12 @@ Opombe za Kubernetes
 kubectl create configmap postgres-init-config --from-file=init.sql=./k8s/shared/init.sql -n <namespace>
 ```
 
-Kje iskati konfiguracijo
+Konfiguracija
 - `docker-compose.yml` — host:container porte in env spremenljivke za lokalni razvoj.
 - `k8s/` — per-service deploy+service manifesti.
 
 Za podroben pregled vseh storitev, portov in okolijskih spremenljivk glej `DOCUMENTATION.md` v tem repozitoriju. Občutljive vrednosti (npr. `DOCKERHUB_USERNAME`, `OPENAI_API_KEY`) konfiguriraj preko lokalnega okolja ali GitHub Secrets, ne v repozitoriju.
+
+API dokumentacija
+- **Markdown**: `API_DOCUMENTATION.md` — pregledna dokumentacija vseh endpoint-ov po mikrostoritvah.
+- **OpenAPI/Swagger**: `openapi.yaml` — OpenAPI 3.0 specifikacija za uporabo z Swagger UI, ReDoc ali generiranje klientov.
