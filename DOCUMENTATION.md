@@ -30,6 +30,10 @@ docker compose up --build
 
 Global / CI: glej `.env` v tem repozitoriju in GitHub Secrets — npr. `DOCKERHUB_USERNAME`, `OPENAI_API_KEY`, Auth0 nastavitve.
 
+API dokumentacija:
+- `API_DOCUMENTATION.md` — pregled vseh REST endpointov po mikrostoritvah (opis, metode, odgovori).
+- `openapi.yaml` — OpenAPI 3 specifikacija za uporabo s Swagger UI / ReDoc ali generiranje klientov.
+
 Opomba: za natančne nastavitve portov in spremenljivk preverite `docker-compose.yml` v tem repozitoriju in `src/main/resources/application.*` v posamezni storitvi.
 
 ## Poslovna logika

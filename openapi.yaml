@@ -1,0 +1,738 @@
+openapi: 3.0.3
+info:
+  title: ShopSync API
+  description: |
+    API dokumentacija za ShopSync mikrostoritve.
+    Vse zahteve se usmerjajo prek gateway-service na portu 8080.
+    
+    Avtentikacija: Vse zahteve (razen `/api/users/register`) zahtevajo JWT token v Authorization header-ju:
+    ```
+    Authorization: Bearer <token>
+    ```
+  version: 1.0.0
+  contact:
+    name: ShopSync Team
+
+servers:
+  - url: http://localhost:8080
+    description: Lokalni razvoj (preko gateway-service)
+  - url: https://api.shopsync.com
+    description: Produkcijski server (primer)
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ============================================
+  # USER SERVICE ENDPOINTS
+  # ============================================
+  /api/users/register:
+    post:
+      summary: Registriraj uporabnika iz Auth0 tokena
+      description: Ustvari ali sinhronizira uporabnika na podlagi Auth0 JWT tokena
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Uporabnik uspešno registriran
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Token ne vsebuje emaila
+
+  /api/users/me:
+    get:
+      summary: Pridobi podatke o trenutnem uporabniku
+      description: Vrne podatke o uporabniku na podlagi JWT tokena. Če uporabnik ne obstaja, ga ustvari.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Podatki o uporabniku
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /api/users/{email}:
+    get:
+      summary: Pridobi uporabnika po emailu
+      parameters:
+        - name: email
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Email naslov uporabnika
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Podatki o uporabniku
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: Uporabnik ne obstaja
+
+  /api/users/update-name:
+    put:
+      summary: Posodobi ime uporabnika
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          text/plain:
+            schema:
+              type: string
+              example: "Janez Novak"
+      responses:
+        '200':
+          description: Ime uspešno posodobljeno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  # ============================================
+  # SHOPPING LIST SERVICE ENDPOINTS
+  # ============================================
+  /api/shopping-lists:
+    get:
+      summary: Pridobi vse sezname trenutnega uporabnika
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Seznam nakupovalnih seznamov
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ShoppingList'
+
+    post:
+      summary: Ustvari nov nakupovalni seznam
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShoppingListCreate'
+      responses:
+        '200':
+          description: Seznam uspešno ustvarjen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShoppingList'
+
+  /api/shopping-lists/{listId}:
+    delete:
+      summary: Izbriši nakupovalni seznam
+      parameters:
+        - name: listId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Seznam uspešno izbrisan
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Seznam uspešno izbrisan."
+
+    patch:
+      summary: Posodobi ime seznama
+      parameters:
+        - name: listId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          text/plain:
+            schema:
+              type: string
+              example: "Novo ime seznama"
+      responses:
+        '200':
+          description: Ime seznama uspešno posodobljeno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShoppingList'
+
+  /api/shopping-lists/{listId}/items:
+    get:
+      summary: Pridobi vse artikle v seznamu
+      parameters:
+        - name: listId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Seznam artiklov
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Item'
+
+    post:
+      summary: Doda artikel v seznam
+      parameters:
+        - name: listId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemCreate'
+      responses:
+        '200':
+          description: Artikel uspešno dodan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+
+  /api/shopping-lists/{listId}/pending:
+    get:
+      summary: Pridobi nekupljene artikle v seznamu
+      parameters:
+        - name: listId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Seznam nekupljenih artiklov
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Item'
+
+  /api/shopping-lists/{listId}/share:
+    post:
+      summary: Deli seznam z drugim uporabnikom
+      parameters:
+        - name: listId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - friendAuth0Id
+              properties:
+                friendAuth0Id:
+                  type: string
+                  example: "auth0|123456789"
+      responses:
+        '200':
+          description: Seznam uspešno deljen
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Seznam uspešno deljen."
+
+  # ============================================
+  # ITEM SERVICE ENDPOINTS
+  # ============================================
+  /api/items/{itemId}:
+    patch:
+      summary: Posodobi artikel
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemUpdate'
+      responses:
+        '200':
+          description: Artikel uspešno posodobljen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+
+    delete:
+      summary: Izbriši artikel iz seznama
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Artikel uspešno izbrisan
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Artikel 123 je bil uspešno odstranjen."
+
+  /api/items/{itemId}/purchase:
+    patch:
+      summary: Preklopi stanje "kupljeno" za artikel
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Stanje artikla uspešno preklopljeno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+
+  # ============================================
+  # PRODUCT SERVICE ENDPOINTS
+  # ============================================
+  /api/products:
+    get:
+      summary: Pridobi vse izdelke uporabnika ali filtriraj po kategoriji
+      parameters:
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filtriranje po kategoriji
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Seznam izdelkov
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+
+    post:
+      summary: Doda nov izdelek v osebni katalog
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductCreate'
+      responses:
+        '200':
+          description: Izdelek uspešno dodan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+
+  /api/products/{productId}:
+    get:
+      summary: Pridobi podrobnosti izdelka
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Podatki o izdelku
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+
+    patch:
+      summary: Posodobi podatke o izdelku
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductUpdate'
+      responses:
+        '200':
+          description: Izdelek uspešno posodobljen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+
+    delete:
+      summary: Izbriši izdelek iz kataloga
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Izdelek uspešno izbrisan
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Izdelek 123 uspešno odstranjen."
+
+  # ============================================
+  # RECIPE SERVICE ENDPOINTS
+  # ============================================
+  /api/recipes:
+    get:
+      summary: Pridobi vse recepte trenutnega uporabnika
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Seznam receptov
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Recipe'
+
+  /api/recipes/import:
+    post:
+      summary: Uvozi recept z URL naslova (OpenAI integracija)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          text/plain:
+            schema:
+              type: string
+              example: "https://www.example.com/recipe/chocolate-cake"
+      responses:
+        '200':
+          description: Recept uspešno uvožen
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Uspešno uvožen recept: Chocolate Cake s 8 sestavinami."
+        '400':
+          description: Napaka pri uvozu recepta
+
+  /api/recipes/{id}:
+    get:
+      summary: Pridobi podrobnosti recepta
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Podatki o receptu
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Recipe'
+        '404':
+          description: Recept ne obstaja
+
+    delete:
+      summary: Izbriši recept
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Recept uspešno izbrisan
+        '403':
+          description: Nimate dovoljenja za brisanje tega recepta
+        '404':
+          description: Recept ne obstaja
+
+  /api/recipes/{id}/create-list:
+    post:
+      summary: Ustvari nakupovalni seznam iz recepta (Kafka event)
+      description: Pošlje Kafka dogodek za ustvarjanje seznama z artikli iz recepta
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Zahteva poslana
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Zahteva poslana za uporabnika: auth0|123456789"
+        '404':
+          description: Recept ne obstaja
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Auth0 JWT token v Authorization header-ju
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        auth0Id:
+          type: string
+          example: "auth0|123456789"
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+        name:
+          type: string
+          example: "Janez Novak"
+
+    ShoppingList:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        name:
+          type: string
+          example: "Nakup za vikend"
+        ownerId:
+          type: string
+          example: "auth0|123456789"
+        sharedWithIds:
+          type: array
+          items:
+            type: string
+          example: ["auth0|987654321"]
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Item'
+
+    ShoppingListCreate:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: "Nakup za vikend"
+
+    Item:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        name:
+          type: string
+          example: "Mleko"
+        quantity:
+          type: integer
+          example: 2
+        purchased:
+          type: boolean
+          example: false
+        product:
+          $ref: '#/components/schemas/Product'
+
+    ItemCreate:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: "Mleko"
+        quantity:
+          type: integer
+          example: 1
+        purchased:
+          type: boolean
+          example: false
+        productId:
+          type: integer
+          format: int64
+          nullable: true
+          example: 5
+
+    ItemUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Mleko"
+        quantity:
+          type: integer
+          example: 2
+        purchased:
+          type: boolean
+          example: true
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        name:
+          type: string
+          example: "Mleko"
+        category:
+          type: string
+          example: "Mlečni izdelki"
+        price:
+          type: number
+          format: double
+          example: 1.29
+        ownerId:
+          type: string
+          example: "auth0|123456789"
+
+    ProductCreate:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: "Mleko"
+        category:
+          type: string
+          example: "Mlečni izdelki"
+        price:
+          type: number
+          format: double
+          example: 1.29
+
+    ProductUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Mleko"
+        category:
+          type: string
+          example: "Mlečni izdelki"
+        price:
+          type: number
+          format: double
+          example: 1.29
+
+    Recipe:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        name:
+          type: string
+          example: "Chocolate Cake"
+        sourceUrl:
+          type: string
+          format: uri
+          example: "https://www.example.com/recipe/chocolate-cake"
+        createdByEmail:
+          type: string
+          format: email
+          example: "user@example.com"
+        ingredients:
+          type: array
+          items:
+            type: string
+          example: ["200g čokolade", "150g masla", "3 jajca", "100g sladkorja"]
