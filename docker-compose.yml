@@ -21,16 +21,6 @@ services:
         limits:
           memory: 256M
 
-  redis:
-    image: redis:latest
-    container_name: shopsync-redis
-    ports:
-      - "6379:6379"
-    deploy:
-      resources:
-        limits:
-          memory: 128M
-
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     container_name: shopsync-zookeeper
@@ -57,3 +47,62 @@ services:
       resources:
         limits:
           memory: 512M
+  
+  user-service:
+    image: ${DOCKERHUB_USERNAME}/user-service:latest
+    container_name: user-service
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/user_db
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    depends_on:
+      - db
+      - kafka
+
+  recipe-service:
+    image: ${DOCKERHUB_USERNAME}/recipe-service:latest
+    container_name: recipe-service
+    ports:
+      - "8084:8084"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/recipe_db
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      - db
+      - kafka
+
+  gateway-service:
+    image: ${DOCKERHUB_USERNAME}/gateway-service:latest
+    container_name: gateway-service
+    ports:
+      - "8080:8080"
+    environment:
+      - USER_SERVICE_URL=http://user-service:8083
+      - RECIPE_SERVICE_URL=http://recipe-service:8084
+      - LIST_SERVICE_URL=http://list-service:8082
+    depends_on:
+      - user-service
+      - recipe-service
+  notification-service:
+    platform: linux/arm64
+    image: ${DOCKERHUB_USERNAME}/notification-service:latest
+    container_name: notification-service
+    environment:
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    depends_on:
+      - kafka
+      - db
+
+  list-service:
+    image: ${DOCKERHUB_USERNAME}/list-service:latest
+    container_name: list-service
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/list_db
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    depends_on:
+      - db
+      - kafka
